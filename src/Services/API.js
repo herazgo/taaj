@@ -1,4 +1,5 @@
 import axios from 'axios'
+import Auth from './Auth';
 
 class APIService {
   constructor() {
@@ -6,6 +7,9 @@ class APIService {
       baseURL: process.env.REACT_APP_API_SERVER,
       timeout: 10000
     })
+
+    if(Auth.check() && Auth.user.token)
+      this.header('X-API-TOKEN', Auth.user.token);
   }
 
   get baseURL() {

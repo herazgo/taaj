@@ -2,12 +2,12 @@ import React, { Component, Fragment } from 'react';
 import { Route, Switch } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { createStore, combineReducers } from 'redux';
+import each from 'lodash/each';
 import Router from './Services/Router';
 import ControllerNotFound from './Exceptions/ControllerNotFound';
 import MiddlewareNotFound from './Exceptions/MiddlewareNotFound';
 import ReducerNotFound from './Exceptions/ReducerNotFound';
-// import { Error404 } from './Views/Errors';
-import each from 'lodash/each';
+import { Error404, Error401 } from './Views/Errors.jsx'
 
 export default class App extends Component {
   constructor() {
@@ -33,7 +33,7 @@ export default class App extends Component {
   createController(ControllerName, ControllerMethod) {
     // Only making a unique hash for controller
     var CryptoJS = require('crypto-js');
-    var hash = CryptoJS.MD5(ControllerName + ControllerMethod);
+    var hash = CryptoJS.MD5(ControllerName);
 
     // If controller doesn't exists in the cached list
     if (typeof this.controllers[hash] === 'undefined') {
@@ -120,13 +120,13 @@ export default class App extends Component {
 
           // Cache the connected controller creator to use it everytime
           // a related route is rendered.
-          this.controllers[hash] = (props, method) => (
-            <ConnectedController store={store} method={method} {...props} />
+          this.controllers[hash] = props => (
+            <ConnectedController store={store} method={ControllerMethod} {...props} />
           );
         } else {
           // If there is no reducer available for the controller,
           // a non-redux controller will be created.
-          this.controllers[hash] = (props, method) => (
+          this.controllers[hash] = props => (
             <Controller method={ControllerMethod} {...props} />
           );
         }
@@ -143,6 +143,8 @@ export default class App extends Component {
   }
 
   render() {
+    const { httpStatus } = this.props.root;
+    
     return (
       <Switch>
         {Router.map(route => (
@@ -151,66 +153,74 @@ export default class App extends Component {
             path={route.path}
             // All routes are always exactly matched
             exact={true}
-            render={props => {
-              // Spliting controller name and method
-              const [ControllerName, ControllerMethod] = route.controller.split('@');
+            render={props => ((() => {
+            switch(httpStatus){
+              case 200: 
+                const pipe = (middles) => {
+                  return middles.slice(0).reduce((res, mw, i, allMw) => {
+                    if(i < allMw.length - 1){
+                      var [mwName, mwParams] = mw.split(':');
+                      
+                      try {
+                        // Import from `src/Middlewares` folder
+                        var middleware = __non_webpack_require__(`${process.env.REACT_APP_PATH}/src/Middlewares/${mwName}.js`).default;
+                      } catch (err) {
+                        if (err.toString().indexOf('Cannot find module') >= 0) {
+                          throw new MiddlewareNotFound(mwName);
+                        }
+  
+                        throw err;
+                      }
 
-              // create a controller using cached creator,
-              // spreading all App and Route props to the controller.
-              var Controller = this.createController(ControllerName, ControllerMethod)({ ...this.props, ...props }, ControllerMethod);
+                      const mwResult = middleware({
+                        // current route
+                        route: route,
+                        // parameters
+                        params: mwParams,
+                        // abort function to set app status
+                        abort: status => this.props.root.setHttpStatus(status)
+                      });
 
-              // Create a new non-pointer array of middlewares.
-              const Middlewares = [...route.middleware];
-
-              // Running middleware index
-              var mi = 0
-
-              // Handler function to move through middlewares
-              const next = (i = mi++) => {
-                // If still there is a middleware remained
-                if (typeof Middlewares[i] !== 'undefined') {
-                  try {
-                    // Import from `src/Middlewares` folder
-                    var Middleware = __non_webpack_require__(`${process.env.REACT_APP_PATH}/src/Middlewares/${Middlewares[i]}.js`).default;
-                  } catch (err) {
-                    if (err.toString().indexOf('Cannot find module') >= 0) {
-                      throw new MiddlewareNotFound(Middlewares[i]);
+                      if(mwResult){
+                        allMw.splice(1);
+                        return mwResult;
+                      }
                     }
-                  }
-
-                  // If any middleware exists
-                  if (Middleware) {
-                    // Running middleware to get the result
-                    const Result = Middleware({
-                      // current route
-                      route: route,
-                      // handler function
-                      next: next
-                    });
-
-                    // If middleware has a result
-                    if (Result)
-                      // Set the middleware result as controller
-                      Controller = Result;
-                  }
+                      
+                    return res;
+                  }, Controller)
                 }
-              }
 
-              // Run middleware handler for first time
-              next()
+                // Spliting controller name and method
+                const [ControllerName, ControllerMethod] = route.controller.split('@');
 
-              return (
-                // Fragmets are virtual nodes to contain other elements
-                <Fragment>
-                  {/* If navigation is blocked, a prompt message appears to confirm user. */}
-                  {/* <Prompt
-                    message={location => navigationMessage.replace(':pathname', location.pathname)}
-                    when={navigationBlocked} /> */}
+                // create a controller using cached creator,
+                // spreading all App and Route props to the controller.
+                var Controller = this.createController(ControllerName, ControllerMethod)
+                  ({ ...this.props, ...props });
 
-                  {Controller}
-                </Fragment>
-              )
-            }} />
+                // Create a new array of middlewares.
+                const Middlewares = [
+                  ...route.middleware,
+                  () => Controller
+                ];
+
+                return (
+                  // Fragmets are virtual nodes to contain other elements
+                  <Fragment>
+                    {/* If navigation is blocked, a prompt message appears to confirm user. */}
+                    {/* <Prompt
+                      message={location => navigationMessage.replace(':pathname', location.pathname)}
+                      when={navigationBlocked} /> */}
+
+                    {pipe(Middlewares)}
+                  </Fragment>
+                );
+
+            case 401: case 403:
+              return <Error401 />
+            }})()
+          )}/>
         ))}
 
         <Route
@@ -219,13 +229,13 @@ export default class App extends Component {
             history.replace({
               ...location,
               pathname: location.pathname.substring(match.path.length)
-            })
-            return null
+            });
+            return null;
           }}
         />
 
         {/* Route not found */}
-        {/* <Route component={Error404} /> */}
+        <Route component={Error404} />
       </Switch>
     )
   }

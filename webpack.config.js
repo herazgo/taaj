@@ -26,8 +26,8 @@ module.exports = function (env, argv) {
         dir: 'dist',
         files: ['index.js'],
         rules: [{
-          search: /[a-z]+\.env\.REACT_APP_PATH/ig,
-          replace: 'process.env.REACT_APP_PATH'
+          search: /[a-z]+\.env\.REACT_APP(\w)/ig,
+          replace: 'process.env.REACT_APP$1'
         }]
       }])
     ],

@@ -5,7 +5,11 @@ const localToken = '__TAAJ_AUTH_TOKEN__';
 
 class AuthService {
   constructor(){
-    this.user = Storage.getItem(localToken);
+    this.authUser = Storage.getItem(localToken);
+  }
+
+  get user(){
+    return this.authUser;
   }
   
   login(authUrl, data) {
@@ -14,15 +18,15 @@ class AuthService {
       API.post(authUrl, data).then(response => {
         // Request responded with a success status in the range of 2xx
         // so assign the responded information as current user
-        this.user = response.data;
+        this.authUser = response.data;
 
         // Save user information in local storage
-        Storage.setItem(localToken, this.user);
+        Storage.setItem(localToken, this.authUser);
   
-        API.header('X-API-TOKEN', this.user.token);
+        API.header('X-API-TOKEN', this.authUser.token);
   
         // Resolve callback with user information
-        resolve(this.user);
+        resolve(this.authUser);
       }).catch(error => {
         if (error.response) {
           // The request was made and the server responded with a status code
@@ -47,17 +51,17 @@ class AuthService {
 
   pretend(user){
     return new Promise(resolve => {
-      this.user = user;
-      Storage.setItem(localToken, this.user);
+      this.authUser = user;
+      Storage.setItem(localToken, this.authUser);
 
-      resolve(this.user);
+      resolve(this.authUser);
     })
   }
 
   check() {
-    this.user = Storage.getItem(localToken);
+    this.authUser = Storage.getItem(localToken);
 
-    if (!this.user) return false;
+    if (!this.authUser) return false;
 
     return true;
   }
