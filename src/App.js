@@ -33,7 +33,7 @@ export default class App extends Component {
   createController(ControllerName, ControllerMethod) {
     // Only making a unique hash for controller
     var CryptoJS = require('crypto-js');
-    var hash = CryptoJS.MD5(ControllerName);
+    var hash = CryptoJS.MD5(`${ControllerName}-${ControllerMethod}`);
 
     // If controller doesn't exists in the cached list
     if (typeof this.controllers[hash] === 'undefined') {
