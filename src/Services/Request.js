@@ -36,9 +36,9 @@ class RequestService {
     return pathname == Router.to(name);
   }
 
-  go(to){
+  go(to, data = {}){
     const toUrl = Router.exists(to) ?
-      Router.to(to) : to;
+      Router.to(to, data) : to;
 
     this.history.push(toUrl)
   }
