@@ -1,16 +1,10 @@
 import React from 'react';
-import Component from './Component';
-import Router from './Services/Router';
-import API from './Services/API';
-import Request from './Services/Request';
-// import Validation from './Services/Validation/Validation';
 import each from 'lodash/each';
-import map from 'lodash/map';
-
+import Component from './Component';
+import Request from './Services/Request';
 import ViewNotFound from './Exceptions/ViewNotFound';
 
 export default class Controller extends Component {
-
   // Default layout
   // Each controller can have it's own layout
   // by setting this porperty to the specific view name.
@@ -37,9 +31,7 @@ export default class Controller extends Component {
     // that the view mounted completely. This avoid loops.
     this.dispatchQueues();
 
-    // If any concurrent request is queued, 
-    // send all of them simultaneously
-    this.sendConcurrentRequests();
+    this.queues = [];
   }
 
   /**
@@ -83,30 +75,10 @@ export default class Controller extends Component {
     return <View {...this.props} controller={this} data={data} />;
   }
 
-  sendConcurrentRequests() {
-    if (this.concurrentRequests && this.concurrentRequests.length) {
-      this.props.openDialog({ type: 'preloader' });
-
-      var requests = [];
-
-      this.concurrentRequests.forEach(cr => {
-        requests.push(cr.request());
-      });
-
-      API.all(requests).then(API.spread(function () {
-        this.concurrentRequests.forEach((cr, i) => {
-          cr.callback(arguments[i]);
-        });
-
-        this.props.closeDialog();
-      }.bind(this)));
-    }
-  }
-
   /**
    * Create request with ability to manipulate browser history
    */
-  createRequest(){
+  createRequest() {
     // Extract match and location
     var { match, location } = this.props
 
@@ -117,20 +89,6 @@ export default class Controller extends Component {
 
     // Bind app history to request service.
     this.request.setHistory(this.props.history);
-  }
-
-  /**
-   * A shorthand to this.ajax.get(url)
-   * @param {String} url 
-   */
-  fetch(url, then = () => { }, params) {
-    if (!this.concurrentRequests)
-      this.concurrentRequests = [];
-
-    this.concurrentRequests.push({
-      request: () => { return API.get(url, { params }) },
-      callback: then
-    })
   }
 
   /**
@@ -152,39 +110,10 @@ export default class Controller extends Component {
   }
 
   /**
-   * Just to avoid importing Router in controllers 
-   * for a simple redirect
-   * @param {String} to 
-   */
-  redirect(to) {
-    Router.redirect(to);
-  }
-
-  /**
-   * Just to avoid importing Router in controllers 
-   * for a simple reload
-   * @param {String} to 
-   */
-  reload() {
-    Router.reload();
-  }
-
-  /**
-   * A shorthand for iterating errors
-   * @param {Function} mapper 
-   */
-  eachError(mapper = () => { }) {
-    return map(this.errors(), mapper);
-  }
-
-  /**
    * Renders the controller
    * OVERRIDING MAY CAUSE SERIOUS MALFUNCTIONING!
    */
   render() {
-    // Importing selected layout as a view
-    const Layout = this.importView(this.layout);
-
     var View = null;
 
     // Call the selected action method
@@ -193,6 +122,9 @@ export default class Controller extends Component {
       View = this[this.props.method].bind(this).call();
     else
       throw 'Invalid controller method: ' + this.props.method;
+
+    // Importing selected layout as a view
+    const Layout = this.importView(this.layout);
 
     // spreading all connected props and dispatches to the layout
     // so all those can be used like in controller,
