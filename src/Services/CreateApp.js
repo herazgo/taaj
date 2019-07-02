@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect, Provider } from 'react-redux';
 import { createStore, applyMiddleware, combineReducers } from 'redux';
-import { withRouter, BrowserRouter } from 'react-router-dom';
+import { withRouter, Router as BrowserRouter } from 'react-router-dom';
 import each from 'lodash/each';
 import DispatchMiddleware from "./DispatchMiddleware";
 import Router from './Router';
@@ -13,8 +13,6 @@ import RouteFileNotFound from '../Exceptions/RouteFileNotFound';
 const createApp = function (options) {
   return new Promise(resolve => {
     try {
-      // const routes = __non_webpack_require__(`${process.env.REACT_APP_PATH}/src/${options.routesFile}`).default
-      // const routes = __non_webpack_require__(`${process.env.REACT_APP_PATH}/src/routes.js`).default
       options.routes.forEach(r => Router.add(r));
 
       // Import root reducer of app.
@@ -23,8 +21,6 @@ const createApp = function (options) {
         ...options.reducers
       }
 
-      // const AppReducer = __non_webpack_require__(`${process.env.REACT_APP_PATH}/src/${options.appReducer}`);
-      // const AppReducer = __non_webpack_require__(`${process.env.REACT_APP_PATH}/src/Reducers/App.js`);
       // All imported redux components
       var allRedux = {};
 
