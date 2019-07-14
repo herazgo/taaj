@@ -5,8 +5,8 @@ import createApp from 'taaj'
 import * as serviceWorker from './serviceWorker'
 
 createApp({
-  rootReducer: 'Reducers/App',
-  routesFile: 'routes.js'
+  reducers: {app: require('./Reducers/App')},
+  routes: require('./routes').default
 }).then(App => {
 
   ReactDOM.render(<App />, document.getElementById('root'))
