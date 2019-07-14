@@ -19,12 +19,12 @@ class AuthService {
         // Request responded with a success status in the range of 2xx
         // so assign the responded information as current user
         this.authUser = response.data;
-
+        
         // Save user information in local storage
         Storage.setItem(localToken, this.authUser);
-  
+        
         API.header('X-API-TOKEN', this.authUser.token);
-  
+        
         // Resolve callback with user information
         resolve(this.authUser);
       }).catch(error => {
@@ -36,10 +36,10 @@ class AuthService {
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
-          callback(error.response.status);
+          reject(error.response.status);
         } else {
           // Something happened in setting up the request that triggered an Error
-          console.log('Unexpected Auth Error: ' + error.message);
+          reject(500);
         }
       });
     })
