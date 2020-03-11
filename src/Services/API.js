@@ -5,7 +5,7 @@ class APIService {
   constructor() {
     this.ajax = axios.create({
       baseURL: process.env.REACT_APP_API_SERVER,
-      timeout: 10000
+      timeout: process.env.REACT_APP_API_TIMEOOUT
     })
 
     if(Auth.check() && Auth.user.token)
